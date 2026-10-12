@@ -1,10 +1,10 @@
 # BookingEngine
 
-Modern, kullanıcı dostu ve yönetici odaklı bir randevu / rezervasyon sistemidir. Müşteriler uzman seçimi, tarih ve saat belirleme, müşteri bilgilerini doldurma işlemlerini gerçekleştirebilir; yöneticiler ise gelen randevuları görüntüleyip durumlarını güncelleyebilir.
+Uzmanlar için randevu oluşturma ve günlük rezervasyonları yönetme olanağı sunan full-stack bir randevu uygulamasıdır. Müşteriler uzman, tarih ve uygun saat seçerek randevu talebi oluşturabilir; yönetici panelinden randevular görüntülenip durumları güncellenebilir.
 
 ## Özeti
 
-BookingEngine, Spring Boot tabanlı bir backend ve React + Vite tabanlı bir frontend içeren full-stack bir uygulamadır. Sistem:
+BookingEngine, Spring Boot tabanlı bir backend ve React + Vite tabanlı bir frontend içerir. Sistem:
 
 - uzman listesi sunar
 - belirli bir uzman için uygun saatleri hesaplar
@@ -21,7 +21,8 @@ BookingEngine, Spring Boot tabanlı bir backend ve React + Vite tabanlı bir fro
 - Spring Web
 - Spring Data JPA
 - Spring Validation
-- PostgreSQL
+- PostgreSQL 16
+- SLF4J / Logback
 - Lombok
 
 ### Frontend
@@ -257,12 +258,19 @@ Body örneği:
 - createdAt
 - updatedAt
 
+## Eşzamanlı Rezervasyonlar
+
+Randevu oluşturulurken servis, uzman/tarih/saat kombinasyonunda iptal edilmemiş mevcut bir randevu olup olmadığını kontrol eder. Kayıt `saveAndFlush` ile veritabanına gönderilir; veritabanından bir bütünlük ihlali gelirse uygulama bunu `409 Conflict` yanıtına dönüştürür.
+
+> **Veritabanı kısıtı hakkında:** Uygulama kodunda veritabanı bütünlük ihlallerini yakalayan akış bulunuyor; ancak bu repoda eşzamanlı istekleri veritabanı seviyesinde kesin olarak engelleyecek partial unique index oluşturan bir migration veya DDL bulunmuyor. Eşzamanlı double-booking korumasının veritabanı garantisi için bu kısıtın kullanılan veritabanında ayrıca tanımlanmış olması gerekir.
+
 ## Geliştirme Notları
 
 - Backend ve frontend ayrı ayrı çalıştırılmaktadır.
 - CORS ayarı frontend için `localhost:5173` olarak konfigüre edilmiştir.
 - Uygulama, uygun saat kontrolü için 09:00 - 17:00 aralığını 30 dakikalık aralıklarla hesaplar.
-- Aynı slot kontrolü hem repository katmanında hem de servis katmanında güvenlik amacıyla uygulanmıştır.
+- İptal edilen randevular uygun slot hesabında ve randevu oluşturma ön kontrolünde dolu kabul edilmez.
+- Hata yanıtları uygulamaya özel JSON biçimindedir; RFC 7807 uyumluluğu varsayılmamalıdır.
 
 ## Sık Karşılaşılan Sorunlar
 
@@ -287,16 +295,3 @@ Projeye katkı sağlamak isterseniz:
 2. Yeni bir branch oluşturun
 3. Değişikliklerinizi yapın
 4. Pull request oluşturun
-
-## Son Söz
-
-BookingEngine, küçük ve orta ölçekli randevu tabanlı işletmeler için uygun, kolay genişletilebilir ve modern bir çözümdür. Hem müşteri deneyimi hem de yönetici operasyonel görünümünü aynı anda destekleyen bir yapıya sahiptir.
-
-İsterseniz bir sonraki adımda bu README'yi:
-
-- daha profesyonel ve premium bir görünüme
-- İngilizce versiyona
-- GitHub için daha detaylı kurulum/usage bölümüne
-- ürün tanıtım metni formatına
-
-dönüştürebilirim.
