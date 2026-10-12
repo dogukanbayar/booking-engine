@@ -18,7 +18,7 @@ const initials = (s: { firstName: string; lastName: string }) =>
   `${s.firstName[0] ?? ''}${s.lastName[0] ?? ''}`;
 
 const inputCls = (bad: boolean) =>
-  `w-full px-4 py-3.5 rounded-2xl bg-white text-[15px] placeholder:text-ink/30 outline-none transition ring-1 ${
+  `w-full px-4 py-3 rounded-2xl bg-white text-[15px] placeholder:text-ink/30 outline-none transition ring-1 ${
     bad ? 'ring-rose-400 bg-rose-50/40' : 'ring-ink/10 hover:ring-ink/20 focus:ring-2 focus:ring-ultra-500'
   }`;
 
@@ -36,7 +36,7 @@ const Field: React.FC<{
 );
 
 const StepTitle: React.FC<{ n: number; done: boolean; children: React.ReactNode }> = ({ n, done, children }) => (
-  <div className="flex items-center gap-3 mb-5">
+  <div className="flex items-center gap-3 mb-4">
     <span
       className={`w-7 h-7 rounded-full grid place-items-center text-xs font-bold transition-colors ${
         done ? 'bg-lime text-ink' : 'bg-ink text-white'
@@ -73,8 +73,9 @@ export const BookingFlow: React.FC = () => {
     });
   }, []);
 
-  useEffect(() => {
+  const loadSpecialists = () => {
     setLoadingSpecialists(true);
+    setErrorMsg(null);
     api.getSpecialists()
       .then(data => {
         setSpecialists(data);
@@ -82,6 +83,10 @@ export const BookingFlow: React.FC = () => {
       })
       .catch(err => setErrorMsg(err.message))
       .finally(() => setLoadingSpecialists(false));
+  };
+
+  useEffect(() => {
+    loadSpecialists();
   }, []);
 
   useEffect(() => {
@@ -102,8 +107,8 @@ export const BookingFlow: React.FC = () => {
   const errors = {
     firstName: form.firstName.trim().length < 2 ? 'Ad en az 2 karakter olmalıdır.' : '',
     lastName: form.lastName.trim().length < 2 ? 'Soyad en az 2 karakter olmalıdır.' : '',
-    email: !emailRegex.test(form.email.trim()) ? 'Geçerli bir e-posta adresi giriniz (örn: ad@ornek.com).' : '',
-    phone: !phoneRegex.test(form.phone.trim().replace(/\s+/g, '')) ? 'Telefon formatı: 05XXXXXXXXX veya 5XXXXXXXXX' : ''
+    email: !emailRegex.test(form.email.trim()) ? 'Geçerli bir e-posta giriniz.' : '',
+    phone: !phoneRegex.test(form.phone.trim().replace(/\s+/g, '')) ? 'Telefon: 05XXXXXXXXX' : ''
   };
 
   const isFormValid =
@@ -144,20 +149,20 @@ export const BookingFlow: React.FC = () => {
   const weekday = dateObj.toLocaleDateString('tr-TR', { weekday: 'long' });
 
   const renderTicket = (done = false) => (
-    <div className="relative bg-ultra-600 text-white rounded-[2rem] overflow-hidden shadow-[0_30px_60px_-20px_rgb(58_56_240/0.6)]">
-      <div className="absolute -top-24 -right-16 w-64 h-64 rounded-full bg-ultra-400/50 blur-3xl" />
-      <div className="relative p-7">
-        <p className="text-sm text-white/70">{done ? 'Randevun hazır' : 'Randevun'}</p>
+    <div className="w-full max-w-[340px] mx-auto bg-ultra-600 text-white rounded-[2rem] overflow-hidden shadow-2xl relative">
+      <div className="absolute -top-20 -right-12 w-48 h-48 rounded-full bg-ultra-400/40 blur-2xl" />
+      <div className="relative p-6">
+        <p className="text-xs text-white/70 tracking-wide uppercase font-semibold">{done ? 'Randevun hazır' : 'Randevu Özeti'}</p>
 
-        <div className="mt-5 flex items-center gap-3 min-h-[3rem]">
+        <div className="mt-4 flex items-center gap-3">
           {specialist ? (
             <>
-              <span className="w-12 h-12 rounded-full bg-lime text-ink grid place-items-center font-display font-extrabold">
+              <span className="w-11 h-11 rounded-full bg-lime text-ink grid place-items-center font-display font-bold text-sm shrink-0">
                 {initials(specialist)}
               </span>
-              <div>
-                <div className="font-semibold leading-tight">{specialist.firstName} {specialist.lastName}</div>
-                <div className="text-sm text-white/70">{specialist.title}</div>
+              <div className="min-w-0">
+                <div className="font-semibold text-sm truncate">{specialist.firstName} {specialist.lastName}</div>
+                <div className="text-xs text-white/70 truncate">{specialist.title}</div>
               </div>
             </>
           ) : (
@@ -165,11 +170,11 @@ export const BookingFlow: React.FC = () => {
           )}
         </div>
 
-        <div className="mt-7 flex items-end gap-4">
-          <div className="font-display font-extrabold text-8xl leading-[0.8] tracking-tighter">{dayNum}</div>
+        <div className="mt-6 flex items-end gap-3">
+          <div className="font-display font-extrabold text-7xl leading-none tracking-tighter">{dayNum}</div>
           <div className="pb-1 capitalize">
-            <div className="font-semibold text-lg leading-tight">{monthShort}</div>
-            <div className="text-white/70 text-sm">{weekday}</div>
+            <div className="font-semibold text-base leading-tight">{monthShort}</div>
+            <div className="text-white/70 text-xs">{weekday}</div>
           </div>
         </div>
       </div>
@@ -177,25 +182,18 @@ export const BookingFlow: React.FC = () => {
       <div className="relative h-6">
         <span className="absolute -left-3 top-0 w-6 h-6 rounded-full bg-mist" />
         <span className="absolute -right-3 top-0 w-6 h-6 rounded-full bg-mist" />
-        <div className="absolute inset-x-6 top-3 border-t-2 border-dashed border-white/25" />
+        <div className="absolute inset-x-6 top-3 border-t-2 border-dashed border-white/20" />
       </div>
 
-      <div className="relative p-7 pt-4 flex items-center justify-between">
+      <div className="relative p-6 pt-3 flex items-center justify-between">
         <div>
-          <div className="text-sm text-white/70">Saat</div>
-          <div
-            key={successData ? successData.startTime : selectedSlot ?? 'none'}
-            className="font-display font-extrabold text-5xl tracking-tight tabular-nums animate-pop"
-          >
-            {done
-              ? successData.startTime.substring(0, 5)
-              : selectedSlot
-              ? selectedSlot.substring(0, 5)
-              : '––:––'}
+          <div className="text-xs text-white/70 font-medium">Saat Dilimi</div>
+          <div className="font-display font-extrabold text-4xl tracking-tight mt-0.5">
+            {done ? successData.startTime.substring(0, 5) : selectedSlot ? selectedSlot.substring(0, 5) : '––:––'}
           </div>
         </div>
         {done && (
-          <span className="px-3 py-1.5 rounded-full bg-lime text-ink text-xs font-bold">
+          <span className="px-3 py-1 rounded-full bg-lime text-ink text-xs font-bold">
             {STATUS_TR[successData.status] ?? successData.status}
           </span>
         )}
@@ -205,14 +203,14 @@ export const BookingFlow: React.FC = () => {
 
   if (successData) {
     return (
-      <div className="max-w-md mx-auto mt-8 animate-rise">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-lime grid place-items-center mx-auto mb-5 animate-pop">
-            <Check className="w-8 h-8" strokeWidth={3} />
+      <div className="max-w-md mx-auto mt-6">
+        <div className="text-center mb-6">
+          <div className="w-14 h-14 rounded-full bg-lime grid place-items-center mx-auto mb-3">
+            <Check className="w-7 h-7" strokeWidth={3} />
           </div>
-          <h1 className="font-display font-extrabold text-4xl tracking-tight">Randevun alındı</h1>
-          <p className="text-ink/60 mt-3">
-            {successData.customerFullName}, talebin kaydedildi. Onaylandığında sana bildireceğiz.
+          <h1 className="font-display font-extrabold text-3xl">Randevun Alındı</h1>
+          <p className="text-ink/60 text-sm mt-1">
+            {successData.customerFullName}, randevu kaydın başarıyla oluşturuldu.
           </p>
         </div>
 
@@ -225,7 +223,7 @@ export const BookingFlow: React.FC = () => {
             setForm({ firstName: '', lastName: '', email: '', phone: '', notes: '' });
             setTouched({ firstName: false, lastName: false, email: false, phone: false });
           }}
-          className="mt-6 w-full py-4 bg-ink text-white rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-ink/90 transition"
+          className="mt-6 w-full max-w-[340px] mx-auto py-3.5 bg-ink text-white rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-ink/90 transition"
         >
           <CalendarPlus className="w-4 h-4" /> Yeni randevu planla
         </button>
@@ -234,29 +232,42 @@ export const BookingFlow: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto animate-rise">
-      <div className="max-w-2xl mb-10 mt-4">
-        <h1 className="font-display font-extrabold text-5xl md:text-6xl tracking-tighter leading-[0.95]">
+    <div className="max-w-5xl mx-auto px-2">
+      <div className="mb-6 mt-2">
+        <h1 className="font-display font-extrabold text-4xl md:text-5xl tracking-tight">
           Uzmanını seç, saatini al.
         </h1>
-        <p className="text-ink/60 mt-4 text-lg">Dört kısa adımda randevun hazır.</p>
+        <p className="text-ink/60 mt-1.5 text-base">Dört kısa adımda randevun hazır.</p>
       </div>
 
       {errorMsg && (
-        <div className="mb-6 p-4 bg-rose-50 ring-1 ring-rose-200 text-rose-700 rounded-2xl flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <span className="font-medium">{errorMsg}</span>
+        <div className="mb-6 p-4 bg-rose-50 ring-1 ring-rose-200 text-rose-700 rounded-2xl flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <span>Backend bağlantısı kurulamadı: <strong>{errorMsg}</strong></span>
+          </div>
+          <button
+            onClick={loadSpecialists}
+            className="px-3 py-1 bg-white ring-1 ring-rose-300 rounded-lg text-xs font-semibold hover:bg-rose-100"
+          >
+            Tekrar Dene
+          </button>
         </div>
       )}
 
-      <div className="grid lg:grid-cols-[1fr_380px] gap-10 items-start">
-        <form onSubmit={handleSubmit} className="space-y-12 order-2 lg:order-1">
+      {/* Grid: Sol taraf form (flex-1), Sağ taraf bilet (shrink-0) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
+        <form onSubmit={handleSubmit} className="space-y-8">
           <section>
             <StepTitle n={1} done={!!specialist}>Uzmanını seç</StepTitle>
             {loadingSpecialists ? (
               <div className="grid sm:grid-cols-2 gap-3">
-                <div className="h-24 rounded-3xl bg-white/70 animate-pulse" />
-                <div className="h-24 rounded-3xl bg-white/70 animate-pulse" />
+                <div className="h-20 rounded-2xl bg-white/70 animate-pulse" />
+                <div className="h-20 rounded-2xl bg-white/70 animate-pulse" />
+              </div>
+            ) : specialists.length === 0 ? (
+              <div className="p-4 bg-white rounded-2xl ring-1 ring-ink/5 text-sm text-ink/60">
+                Henüz kayıtlı uzman bulunamadı. Backend servisinizin çalıştığından emin olun.
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 gap-3">
@@ -267,23 +278,22 @@ export const BookingFlow: React.FC = () => {
                       key={s.id}
                       type="button"
                       onClick={() => setSelectedSpecialist(s.id)}
-                      aria-pressed={active}
-                      className={`flex items-center gap-4 p-4 text-left rounded-3xl transition-all ${
+                      className={`flex items-center gap-3 p-3.5 text-left rounded-2xl transition-all ${
                         active
-                          ? 'bg-ink text-white shadow-xl shadow-ink/20 -translate-y-0.5'
+                          ? 'bg-ink text-white shadow-lg'
                           : 'bg-white ring-1 ring-ink/5 hover:ring-ink/20'
                       }`}
                     >
                       <span
-                        className={`w-14 h-14 rounded-2xl grid place-items-center font-display font-extrabold text-lg shrink-0 ${
+                        className={`w-11 h-11 rounded-xl grid place-items-center font-display font-extrabold text-sm shrink-0 ${
                           active ? 'bg-lime text-ink' : 'bg-ultra-50 text-ultra-600'
                         }`}
                       >
                         {initials(s)}
                       </span>
-                      <span>
-                        <span className="block font-semibold">{s.firstName} {s.lastName}</span>
-                        <span className={`block text-sm ${active ? 'text-white/60' : 'text-ink/50'}`}>{s.title}</span>
+                      <span className="min-w-0">
+                        <span className="block font-semibold text-sm truncate">{s.firstName} {s.lastName}</span>
+                        <span className={`block text-xs truncate ${active ? 'text-white/60' : 'text-ink/50'}`}>{s.title}</span>
                       </span>
                     </button>
                   );
@@ -294,7 +304,7 @@ export const BookingFlow: React.FC = () => {
 
           <section>
             <StepTitle n={2} done={!!selectedDate}>Günü seç</StepTitle>
-            <div className="flex gap-2 overflow-x-auto pb-3 -mx-1 px-1 snap-x">
+            <div className="flex gap-2 overflow-x-auto pb-2">
               {days.map(d => {
                 const iso = toISO(d);
                 const active = iso === selectedDate;
@@ -303,44 +313,34 @@ export const BookingFlow: React.FC = () => {
                     key={iso}
                     type="button"
                     onClick={() => setSelectedDate(iso)}
-                    aria-pressed={active}
-                    className={`snap-start shrink-0 w-[4.5rem] py-3 rounded-2xl text-center transition-all ${
-                      active ? 'bg-ultra-600 text-white shadow-lg shadow-ultra-600/30' : 'bg-white ring-1 ring-ink/5 hover:ring-ink/20'
+                    className={`shrink-0 w-16 py-2.5 rounded-xl text-center transition-all ${
+                      active ? 'bg-ultra-600 text-white shadow-md' : 'bg-white ring-1 ring-ink/5 hover:ring-ink/20'
                     }`}
                   >
-                    <div className={`text-xs capitalize ${active ? 'text-white/70' : 'text-ink/50'}`}>
+                    <div className={`text-[11px] capitalize ${active ? 'text-white/70' : 'text-ink/50'}`}>
                       {d.toLocaleDateString('tr-TR', { weekday: 'short' })}
                     </div>
-                    <div className="font-display font-extrabold text-2xl leading-tight mt-0.5">{d.getDate()}</div>
+                    <div className="font-display font-bold text-xl mt-0.5">{d.getDate()}</div>
                   </button>
                 );
               })}
             </div>
-            <label className="inline-flex items-center gap-2 text-sm text-ink/60 mt-1">
-              Başka bir gün:
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={e => e.target.value && setSelectedDate(e.target.value)}
-                className="bg-white rounded-xl px-3 py-1.5 ring-1 ring-ink/10 text-ink outline-none focus:ring-2 focus:ring-ultra-500"
-              />
-            </label>
           </section>
 
           <section>
             <StepTitle n={3} done={!!selectedSlot}>Saatini seç</StepTitle>
             {loadingSlots ? (
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {[...Array(10)].map((_, i) => (
-                  <div key={i} className="h-12 rounded-2xl bg-white/70 animate-pulse" />
+              <div className="grid grid-cols-4 gap-2">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="h-10 rounded-xl bg-white/70 animate-pulse" />
                 ))}
               </div>
             ) : availableSlots.length === 0 ? (
-              <div className="p-5 rounded-2xl bg-white ring-1 ring-ink/5 text-ink/60 text-sm">
-                Bu günde boş saat yok. Üstteki şeritten başka bir gün seçebilirsin.
+              <div className="p-4 rounded-xl bg-white ring-1 ring-ink/5 text-ink/60 text-sm">
+                Bu günde uygun randevu saati bulunmuyor.
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 {availableSlots.map(slot => {
                   const active = selectedSlot === slot;
                   return (
@@ -348,10 +348,9 @@ export const BookingFlow: React.FC = () => {
                       key={slot}
                       type="button"
                       onClick={() => setSelectedSlot(slot)}
-                      aria-pressed={active}
-                      className={`h-12 rounded-2xl font-semibold tabular-nums transition-all ${
+                      className={`h-10 rounded-xl font-semibold text-sm transition-all ${
                         active
-                          ? 'bg-lime text-ink scale-105 shadow-lg shadow-lime/60'
+                          ? 'bg-lime text-ink shadow-md scale-105'
                           : 'bg-white ring-1 ring-ink/5 hover:ring-ink/25 text-ink/80'
                       }`}
                     >
@@ -365,11 +364,10 @@ export const BookingFlow: React.FC = () => {
 
           <section>
             <StepTitle n={4} done={isFormValid}>Bilgilerin</StepTitle>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-3.5">
               <Field label="Adın" error={touched.firstName ? errors.firstName : ''}>
                 <input
                   type="text"
-                  autoComplete="given-name"
                   placeholder="Ahmet"
                   value={form.firstName}
                   onBlur={() => setTouched({ ...touched, firstName: true })}
@@ -380,7 +378,6 @@ export const BookingFlow: React.FC = () => {
               <Field label="Soyadın" error={touched.lastName ? errors.lastName : ''}>
                 <input
                   type="text"
-                  autoComplete="family-name"
                   placeholder="Yılmaz"
                   value={form.lastName}
                   onBlur={() => setTouched({ ...touched, lastName: true })}
@@ -391,7 +388,6 @@ export const BookingFlow: React.FC = () => {
               <Field label="E-posta" error={touched.email ? errors.email : ''}>
                 <input
                   type="email"
-                  autoComplete="email"
                   placeholder="ornek@alanadi.com"
                   value={form.email}
                   onBlur={() => setTouched({ ...touched, email: true })}
@@ -402,7 +398,6 @@ export const BookingFlow: React.FC = () => {
               <Field label="Telefon" error={touched.phone ? errors.phone : ''}>
                 <input
                   type="tel"
-                  autoComplete="tel"
                   placeholder="05XXXXXXXXX"
                   value={form.phone}
                   onBlur={() => setTouched({ ...touched, phone: true })}
@@ -412,8 +407,8 @@ export const BookingFlow: React.FC = () => {
               </Field>
               <Field label="Not (isteğe bağlı)" className="sm:col-span-2">
                 <textarea
-                  rows={3}
-                  placeholder="Görüşme konusunu kısaca yazabilirsin"
+                  rows={2}
+                  placeholder="Görüşme konusu veya notunuz..."
                   value={form.notes}
                   onChange={e => setForm({ ...form, notes: e.target.value })}
                   className={`${inputCls(false)} resize-none`}
@@ -426,33 +421,21 @@ export const BookingFlow: React.FC = () => {
             <button
               type="submit"
               disabled={!isFormValid || submitting}
-              className={`group w-full py-5 rounded-2xl font-display font-bold text-lg flex items-center justify-center gap-3 transition-all ${
+              className={`w-full py-4 rounded-2xl font-display font-bold text-base flex items-center justify-center gap-2 transition-all ${
                 isFormValid && !submitting
-                  ? 'bg-ultra-600 text-white hover:bg-ultra-700 shadow-xl shadow-ultra-600/30 hover:-translate-y-0.5'
+                  ? 'bg-ultra-600 text-white hover:bg-ultra-700 shadow-xl'
                   : 'bg-ink/10 text-ink/30 cursor-not-allowed'
               }`}
             >
-              {submitting ? (
-                <>
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Randevu oluşturuluyor
-                </>
-              ) : (
-                <>
-                  Randevuyu oluştur
-                  <ArrowRight className="w-5 h-5 transition-transform group-enabled:group-hover:translate-x-1" />
-                </>
+              {submitting ? 'Randevu oluşturuluyor...' : (
+                <>Randevuyu Tamamla <ArrowRight className="w-4 h-4" /></>
               )}
             </button>
-            {!isFormValid && (
-              <p className="text-center text-sm text-ink/40 mt-3">
-                Uzman, saat ve tüm zorunlu alanlar tamamlanınca buton aktif olur.
-              </p>
-            )}
           </div>
         </form>
 
-        <aside className="order-1 lg:order-2 lg:sticky lg:top-28">
+        {/* Sağ Sütun: Bilet */}
+        <aside className="sticky top-24 hidden lg:block">
           {renderTicket()}
         </aside>
       </div>
