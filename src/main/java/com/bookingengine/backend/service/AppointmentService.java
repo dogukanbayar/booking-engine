@@ -33,12 +33,12 @@ public class AppointmentService {
 
     @Transactional
     public AppointmentResponse createAppointment(CreateAppointmentRequest request) {
-        log.info("Randevu talebi işleniyor: Specialist ID={}, Date={}, Time={}", 
+        log.info("Randevu talebi isleniyor: Specialist ID={}, Date={}, Time={}", 
                 request.getSpecialistId(), request.getAppointmentDate(), request.getStartTime());
 
         Specialist specialist = specialistRepository.findById(request.getSpecialistId())
                 .orElseThrow(() -> {
-                    log.warn("Uzman bulunamadı: ID={}", request.getSpecialistId());
+                    log.warn("Uzman bulunamadi: ID={}", request.getSpecialistId());
                     return new ResourceNotFoundException("Uzman bulunamadı.");
                 });
 
@@ -49,7 +49,7 @@ public class AppointmentService {
         );
 
         if (isBooked) {
-            log.warn("Slot çakışması engellendi (Pre-check): Specialist ID={}, Date={}, Time={}", 
+            log.warn("Slot cakismasi engellendi (Pre-check): Specialist ID={}, Date={}, Time={}", 
                     request.getSpecialistId(), request.getAppointmentDate(), request.getStartTime());
             throw new SlotAlreadyBookedException("Seçilen tarih ve saat dilimi için randevu doludur.");
         }
@@ -78,12 +78,19 @@ public class AppointmentService {
 
         try {
             Appointment saved = appointmentRepository.saveAndFlush(appointment);
-            log.info("Randevu başarıyla oluşturuldu: ID={}, Customer={}", saved.getId(), customer.getEmail());
+            log.info("Randevu basariyla olusturuldu: ID={}, Customer={}", saved.getId(), customer.getEmail());
             return mapToResponse(saved);
         } catch (DataIntegrityViolationException ex) {
-            log.error("Eşzamanlı çakışma yakalandı (Database constraint): {}", ex.getMessage());
+            log.error("Eszamanli cakisma yakalandi (Database constraint): {}", ex.getMessage());
             throw new SlotAlreadyBookedException("Seçilen randevu aralığı az önce başka bir kullanıcı tarafından rezerve edildi.");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public AppointmentResponse getAppointmentById(Long id) {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Randevu bulunamadı: " + id));
+        return mapToResponse(appointment);
     }
 
     @Transactional(readOnly = true)
@@ -102,7 +109,7 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Randevu kaydı bulunamadı: " + id));
 
-        log.info("Randevu durumu güncelleniyor: ID={}, Eski Durum={}, Yeni Durum={}", 
+        log.info("Randevu durumu guncelleniyor: ID={}, Eski Durum={}, Yeni Durum={}", 
                 id, appointment.getStatus(), request.getStatus());
 
         appointment.setStatus(request.getStatus());

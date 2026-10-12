@@ -13,27 +13,25 @@ import java.util.List;
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
+    @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM Appointment a " +
+           "WHERE a.specialist.id = :specialistId " +
+           "AND a.appointmentDate = :appointmentDate " +
+           "AND a.startTime = :startTime " +
+           "AND a.status != com.bookingengine.backend.enums.AppointmentStatus.CANCELLED")
+    boolean existsActiveSlot(@Param("specialistId") Long specialistId,
+                             @Param("appointmentDate") LocalDate appointmentDate,
+                             @Param("startTime") LocalTime startTime);
+
     @Query("SELECT a.startTime FROM Appointment a " +
            "WHERE a.specialist.id = :specialistId " +
-           "AND a.appointmentDate = :date " +
-           "AND a.status <> com.bookingengine.backend.enums.AppointmentStatus.CANCELLED")
-    List<LocalTime> findBookedTimesBySpecialistAndDate(
-            @Param("specialistId") Long specialistId,
-            @Param("date") LocalDate date
-    );
+           "AND a.appointmentDate = :appointmentDate " +
+           "AND a.status != com.bookingengine.backend.enums.AppointmentStatus.CANCELLED")
+    List<LocalTime> findBookedTimesBySpecialistAndDate(@Param("specialistId") Long specialistId,
+                                                      @Param("appointmentDate") LocalDate appointmentDate);
 
-    @Query("SELECT COUNT(a) > 0 FROM Appointment a " +
-           "WHERE a.specialist.id = :specialistId " +
-           "AND a.appointmentDate = :date " +
-           "AND a.startTime = :startTime " +
-           "AND a.status <> com.bookingengine.backend.enums.AppointmentStatus.CANCELLED")
-    boolean existsActiveSlot(
-            @Param("specialistId") Long specialistId,
-            @Param("date") LocalDate date,
-            @Param("startTime") LocalTime startTime
-    );
+    List<Appointment> findByAppointmentDateAndSpecialistId(LocalDate appointmentDate, Long specialistId);
 
-    List<Appointment> findByAppointmentDateOrderByStartTimeAsc(LocalDate date);
+    List<Appointment> findByAppointmentDate(LocalDate appointmentDate);
 
-    List<Appointment> findBySpecialistIdAndAppointmentDateOrderByStartTimeAsc(Long specialistId, LocalDate date);
+    List<Appointment> findBySpecialistIdAndAppointmentDate(Long specialistId, LocalDate appointmentDate);
 }
