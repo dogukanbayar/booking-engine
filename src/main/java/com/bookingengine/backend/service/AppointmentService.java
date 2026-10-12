@@ -13,6 +13,8 @@ import com.bookingengine.backend.repository.AppointmentRepository;
 import com.bookingengine.backend.repository.CustomerRepository;
 import com.bookingengine.backend.repository.SpecialistRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AppointmentService {
@@ -30,22 +33,27 @@ public class AppointmentService {
 
     @Transactional
     public AppointmentResponse createAppointment(CreateAppointmentRequest request) {
-        Specialist specialist = specialistRepository.findById(request.getSpecialistId())
-                .orElseThrow(() -> new ResourceNotFoundException("Uzman bulunamadı. ID: " + request.getSpecialistId()));
+        log.info("Randevu talebi işleniyor: Specialist ID={}, Date={}, Time={}", 
+                request.getSpecialistId(), request.getAppointmentDate(), request.getStartTime());
 
-        // Double Booking Önleme: Uygulama seviyesi kontrolü
-        boolean isSlotTaken = appointmentRepository.existsActiveSlot(
+        Specialist specialist = specialistRepository.findById(request.getSpecialistId())
+                .orElseThrow(() -> {
+                    log.warn("Uzman bulunamadı: ID={}", request.getSpecialistId());
+                    return new ResourceNotFoundException("Uzman bulunamadı.");
+                });
+
+        boolean isBooked = appointmentRepository.existsActiveSlot(
                 request.getSpecialistId(),
                 request.getAppointmentDate(),
                 request.getStartTime()
         );
 
-        if (isSlotTaken) {
-            throw new SlotAlreadyBookedException("Seçilen tarih ve saat dilimi (" + 
-                    request.getAppointmentDate() + " " + request.getStartTime() + ") doludur.");
+        if (isBooked) {
+            log.warn("Slot çakışması engellendi (Pre-check): Specialist ID={}, Date={}, Time={}", 
+                    request.getSpecialistId(), request.getAppointmentDate(), request.getStartTime());
+            throw new SlotAlreadyBookedException("Seçilen tarih ve saat dilimi için randevu doludur.");
         }
 
-        // Müşteri bul veya ilk kez geliyorsa kaydet
         Customer customer = customerRepository.findByEmail(request.getCustomerEmail())
                 .orElseGet(() -> customerRepository.save(
                         Customer.builder()
@@ -68,50 +76,54 @@ public class AppointmentService {
                 .notes(request.getNotes())
                 .build();
 
-        Appointment saved = appointmentRepository.save(appointment);
-        return mapToResponse(saved);
-    }
-
-    @Transactional(readOnly = true)
-    public AppointmentResponse getAppointmentById(Long id) {
-        Appointment appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Randevu bulunamadı. ID: " + id));
-        return mapToResponse(appointment);
+        try {
+            Appointment saved = appointmentRepository.saveAndFlush(appointment);
+            log.info("Randevu başarıyla oluşturuldu: ID={}, Customer={}", saved.getId(), customer.getEmail());
+            return mapToResponse(saved);
+        } catch (DataIntegrityViolationException ex) {
+            log.error("Eşzamanlı çakışma yakalandı (Database constraint): {}", ex.getMessage());
+            throw new SlotAlreadyBookedException("Seçilen randevu aralığı az önce başka bir kullanıcı tarafından rezerve edildi.");
+        }
     }
 
     @Transactional(readOnly = true)
     public List<AppointmentResponse> getAppointments(LocalDate date, Long specialistId) {
-        List<Appointment> list;
+        List<Appointment> appointments;
         if (specialistId != null) {
-            list = appointmentRepository.findBySpecialistIdAndAppointmentDateOrderByStartTimeAsc(specialistId, date);
+            appointments = appointmentRepository.findByAppointmentDateAndSpecialistId(date, specialistId);
         } else {
-            list = appointmentRepository.findByAppointmentDateOrderByStartTimeAsc(date);
+            appointments = appointmentRepository.findByAppointmentDate(date);
         }
-        return list.stream().map(this::mapToResponse).toList();
+        return appointments.stream().map(this::mapToResponse).toList();
     }
 
     @Transactional
     public AppointmentResponse updateStatus(Long id, UpdateStatusRequest request) {
         Appointment appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Randevu bulunamadı. ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Randevu kaydı bulunamadı: " + id));
+
+        log.info("Randevu durumu güncelleniyor: ID={}, Eski Durum={}, Yeni Durum={}", 
+                id, appointment.getStatus(), request.getStatus());
+
         appointment.setStatus(request.getStatus());
         return mapToResponse(appointmentRepository.save(appointment));
     }
 
-    private AppointmentResponse mapToResponse(Appointment a) {
+    private AppointmentResponse mapToResponse(Appointment entity) {
         return AppointmentResponse.builder()
-                .id(a.getId())
-                .specialistId(a.getSpecialist().getId())
-                .specialistFullName(a.getSpecialist().getFirstName() + " " + a.getSpecialist().getLastName())
-                .specialistTitle(a.getSpecialist().getTitle())
-                .customerFullName(a.getCustomer().getFirstName() + " " + a.getCustomer().getLastName())
-                .customerEmail(a.getCustomer().getEmail())
-                .customerPhone(a.getCustomer().getPhone())
-                .appointmentDate(a.getAppointmentDate())
-                .startTime(a.getStartTime())
-                .endTime(a.getEndTime())
-                .status(a.getStatus())
-                .notes(a.getNotes())
+                .id(entity.getId())
+                .specialistId(entity.getSpecialist().getId())
+                .specialistFullName(entity.getSpecialist().getFirstName() + " " + entity.getSpecialist().getLastName())
+                .specialistTitle(entity.getSpecialist().getTitle())
+                .customerFullName(entity.getCustomer().getFirstName() + " " + entity.getCustomer().getLastName())
+                .customerEmail(entity.getCustomer().getEmail())
+                .customerPhone(entity.getCustomer().getPhone())
+                .appointmentDate(entity.getAppointmentDate())
+                .startTime(entity.getStartTime())
+                .endTime(entity.getEndTime())
+                .status(entity.getStatus())
+                .notes(entity.getNotes())
+                .createdAt(entity.getCreatedAt())
                 .build();
     }
 }
